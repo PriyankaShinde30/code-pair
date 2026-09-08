@@ -1,33 +1,30 @@
-// Overview:
-// This component provides the home page where users can create a new room or join an existing one.
-
 import React, { useState } from "react";
 import { v4 as uuidV4 } from "uuid";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
 const Home = () => {
-  const navigate = useNavigate(); // Navigation helper
+  const navigate = useNavigate();
 
-  const [roomId, setRoomId] = useState(""); // State for Room ID
-  const [username, setUsername] = useState(""); // State for Username
+  const [roomId, setRoomId] = useState("");
+  const [username, setUsername] = useState("");
 
-  // Function to create a new room
-  const createNewRoom = (e) => {
-    e.preventDefault();
-    const id = uuidV4(); // Generate a unique ID
-    setRoomId(id); // Set the Room ID
+  // Create a new room
+  const createNewRoom = () => {
+    const id = uuidV4();
+
+    setRoomId(id);
+
     toast.success("Created a new room");
   };
 
-  // Function to join a room
+  // Join a room
   const joinRoom = () => {
     if (!roomId || !username) {
       toast.error("ROOM ID & username is required");
       return;
     }
 
-    // Redirect to the editor page
     navigate(`/editor/${roomId}`, {
       state: {
         username,
@@ -35,7 +32,7 @@ const Home = () => {
     });
   };
 
-  // Handle Enter key press for input fields
+  // Handle Enter key
   const handleInputEnter = (e) => {
     if (e.code === "Enter") {
       joinRoom();
@@ -50,7 +47,9 @@ const Home = () => {
           src="/codeparifinal.png"
           alt="code-sync-logo"
         />
+
         <h4 className="mainLabel">Paste invitation ROOM ID</h4>
+
         <div className="inputGroup">
           <input
             type="text"
@@ -60,6 +59,7 @@ const Home = () => {
             value={roomId}
             onKeyUp={handleInputEnter}
           />
+
           <input
             type="text"
             className="inputBox"
@@ -68,17 +68,24 @@ const Home = () => {
             value={username}
             onKeyUp={handleInputEnter}
           />
+
           <button className="btn joinBtn" onClick={joinRoom}>
             Join
           </button>
+
           <span className="createInfo">
-            If you don't have an invite then create &nbsp;
-            <a onClick={createNewRoom} className="createNewBtn">
+            If you don't have an invite then create&nbsp;
+            <button
+              type="button"
+              onClick={createNewRoom}
+              className="createNewBtn"
+            >
               new room
-            </a>
+            </button>
           </span>
         </div>
       </div>
+
       <footer>
         <h4>Built with 🩷 by Priyanka Shinde</h4>
       </footer>

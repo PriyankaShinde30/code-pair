@@ -1,13 +1,13 @@
-// Overview:
-// This component manages the Editor Page, handling socket connections, client list updates,
-// and real-time code collaboration in a specific room.
+import React, { useState, useRef, useEffect, useCallback } from "react";
 
-import React, { useState, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
+
 import ACTIONS from "../actions.js";
 import Client from "../components/Client";
 import Editor from "../components/Editor";
+
 import { initSocket } from "../socket";
+
 import {
   useLocation,
   useNavigate,
@@ -16,71 +16,97 @@ import {
 } from "react-router-dom";
 
 const EditorPage = () => {
-  const socketRef = useRef(null); // Reference for socket connection
-  const codeRef = useRef(null); // Reference for the current code
-  const location = useLocation(); // Access route state (e.g., username)
-  const { roomId } = useParams(); // Get the roomId from URL params
-  const reactNavigator = useNavigate(); // Navigation helper
-  const [clients, setClients] = useState([]); // State to store connected clients
+  const socketRef = useRef(null);
+  const codeRef = useRef(null);
 
+  const location = useLocation();
+  const { roomId } = useParams();
+  const reactNavigator = useNavigate();
+
+  const [clients, setClients] = useState([]);
+  const [socketReady, setSocketReady] = useState(false);
+
+  // Keep the code reference updated
+  const handleCodeChange = useCallback((code) => {
+    codeRef.current = code;
+  }, []);
+
+  // Initialize Socket.io connection
   useEffect(() => {
+    let socket;
+
     const init = async () => {
-      // Initialize socket connection
-      socketRef.current = await initSocket();
-      socketRef.current.on("connect_error", handleErrors);
-      socketRef.current.on("connect_failed", handleErrors);
+      try {
+        socket = await initSocket();
 
-      function handleErrors(e) {
-        console.log("socket error", e);
-        toast.error("Socket connection failed, try again later.");
-        reactNavigator("/"); // Redirect on error
-      }
+        socketRef.current = socket;
 
-      // Emit join event with roomId and username
-      socketRef.current.emit(ACTIONS.JOIN, {
-        roomId,
-        username: location.state?.username,
-      });
+        // Socket connection errors
+        const handleErrors = (e) => {
+          console.log("socket error", e);
+          toast.error("Socket connection failed, try again later.");
+          reactNavigator("/");
+        };
 
-      // Listen for joined event
-      socketRef.current.on(
-        ACTIONS.JOINED,
-        ({ clients, username, socketId }) => {
+        socket.on("connect_error", handleErrors);
+        socket.on("connect_failed", handleErrors);
+
+        // Join the room
+        socket.emit(ACTIONS.JOIN, {
+          roomId,
+          username: location.state?.username,
+        });
+
+        // When another user joins
+        const handleJoined = ({ clients, username, socketId }) => {
           if (username !== location.state?.username) {
             toast.success(`${username} joined the room.`);
           }
-          setClients(clients); // Update clients list
-          socketRef.current.emit(ACTIONS.SYNC_CODE, {
+
+          setClients(clients);
+
+          // Send current code to the newly joined user
+          socket.emit(ACTIONS.SYNC_CODE, {
             code: codeRef.current,
             socketId,
           });
-        },
-      );
+        };
 
-      // Listen for disconnected event
-      socketRef.current.on(ACTIONS.DISCONNECTED, ({ socketId, username }) => {
-        toast.success(`${username} left the room.`);
-        setClients((prev) =>
-          prev.filter((client) => client.socketId !== socketId),
-        );
-      });
+        socket.on(ACTIONS.JOINED, handleJoined);
+
+        // When another user leaves
+        const handleDisconnected = ({ socketId, username }) => {
+          toast.success(`${username} left the room.`);
+
+          setClients((prev) =>
+            prev.filter((client) => client.socketId !== socketId),
+          );
+        };
+
+        socket.on(ACTIONS.DISCONNECTED, handleDisconnected);
+
+        // Tell React that socket is ready
+        setSocketReady(true);
+      } catch (error) {
+        console.log("Socket initialization error:", error);
+        toast.error("Unable to connect to the server.");
+        reactNavigator("/");
+      }
     };
 
     init();
 
-    // Cleanup on component unmount
+    // Cleanup
     return () => {
-      const socket = socketRef.current;
-
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current.off(ACTIONS.JOINED);
-        socketRef.current.off(ACTIONS.DISCONNECTED);
+      if (socket) {
+        socket.disconnect();
       }
-    };
-  }, []);
 
-  // Function to copy Room ID
+      socketRef.current = null;
+    };
+  }, [location.state?.username, reactNavigator, roomId]);
+
+  // Copy Room ID
   async function copyRoomId() {
     try {
       await navigator.clipboard.writeText(roomId);
@@ -91,12 +117,12 @@ const EditorPage = () => {
     }
   }
 
-  // Function to leave the room
+  // Leave room
   function leaveRoom() {
     reactNavigator("/");
   }
 
-  // Redirect if no username is found in location state
+  // Redirect if username is missing
   if (!location.state) {
     return <Navigate to="/" />;
   }
@@ -108,28 +134,33 @@ const EditorPage = () => {
           <div className="logo">
             <img className="logoImage" src="/innnerlogo.png" alt="logo" />
           </div>
+
           <h3>Connected</h3>
+
           <div className="clientsList">
             {clients.map((client) => (
               <Client key={client.socketId} username={client.username} />
             ))}
           </div>
         </div>
+
         <button className="btn copyBtn" onClick={copyRoomId}>
           Copy ROOM ID
         </button>
+
         <button className="btn leaveBtn" onClick={leaveRoom}>
           Leave
         </button>
       </div>
+
       <div className="editorWrap">
-        <Editor
-          socketRef={socketRef}
-          roomId={roomId}
-          onCodeChange={(code) => {
-            codeRef.current = code;
-          }}
-        />
+        {socketReady && (
+          <Editor
+            socketRef={socketRef}
+            roomId={roomId}
+            onCodeChange={handleCodeChange}
+          />
+        )}
       </div>
     </div>
   );
