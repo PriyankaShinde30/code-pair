@@ -51,16 +51,19 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
 
   // useEffect to handle incoming code changes from the Socket.io server
   useEffect(() => {
-    if (socketRef.current) {
-      socketRef.current.on(ACTIONS.CODE_CHANGE, ({ code }) => {
-        if (code !== null) {
-          // Check if the received code is not null
-          editorRef.current.setValue(code); // Update the editor with the received code
-        }
-      });
+    const socket = socketRef.current;
+
+    if (!socket) {
+      return;
     }
 
-    socket.on(ACTIONS.CODE_CHANGE, handleCodeChange);
+    const handleCodeChange = ({ code }) => {
+      if (code !== null) {
+        // Check if the received code is not null
+        editorRef.current.setValue(code); // Update the editor with the received code
+      }
+    };
+    socketocket.on(ACTIONS.CODE_CHANGE, handleCodeChange);
 
     // Cleanup function to remove the event listener when the component unmounts
     return () => {
