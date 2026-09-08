@@ -58,18 +58,17 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
     }
 
     const handleCodeChange = ({ code }) => {
-      if (code !== null) {
-        // Check if the received code is not null
-        editorRef.current.setValue(code); // Update the editor with the received code
+      if (code !== null && editorRef.current) {
+        editorRef.current.setValue(code);
       }
     };
-    socketocket.on(ACTIONS.CODE_CHANGE, handleCodeChange);
 
-    // Cleanup function to remove the event listener when the component unmounts
+    socket.on(ACTIONS.CODE_CHANGE, handleCodeChange);
+
     return () => {
-      socket.off(ACTIONS.CODE_CHANGE, handleCodeChange); // Remove the code change event listener
+      socket.off(ACTIONS.CODE_CHANGE, handleCodeChange);
     };
-  }, [socketRef.current]);
+  }, [socketRef]);
 
   // Render a textarea that will be transformed into the CodeMirror editor
   return <textarea id="realtimeEditor"></textarea>;
