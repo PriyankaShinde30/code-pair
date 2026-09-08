@@ -70,6 +70,8 @@ const EditorPage = () => {
 
     // Cleanup on component unmount
     return () => {
+      const socket = socketRef.current;
+
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current.off(ACTIONS.JOINED);

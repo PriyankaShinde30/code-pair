@@ -47,7 +47,7 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
       });
     }
     init(); // Call the init function to initialize the editor
-  }, [socketRef.current]);
+  }, []);
 
   // useEffect to handle incoming code changes from the Socket.io server
   useEffect(() => {
@@ -60,9 +60,11 @@ const Editor = ({ socketRef, roomId, onCodeChange }) => {
       });
     }
 
+    socket.on(ACTIONS.CODE_CHANGE, handleCodeChange);
+
     // Cleanup function to remove the event listener when the component unmounts
     return () => {
-      socketRef.current.off(ACTIONS.CODE_CHANGE); // Remove the code change event listener
+      socket.off(ACTIONS.CODE_CHANGE, handleCodeChange); // Remove the code change event listener
     };
   }, [socketRef.current]);
 
